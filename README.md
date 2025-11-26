@@ -11,7 +11,9 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 pyro5-ns
 
 ##### Iniciar o servidor
-python server.py
+python server.py SERVER_IP
 
 ##### Iniciar clientes
-python client.py 
+python client.py SERVER_IP
+
+Se não for passado argumentos para o server.py e pro client.py -> localhost é assumido como default

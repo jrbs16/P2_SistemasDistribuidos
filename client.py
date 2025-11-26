@@ -1,14 +1,13 @@
 import Pyro5.api
 import threading
+import configparser
 import time
+import socket
 
 @Pyro5.api.expose
 class ClientCallback:
     def receive_message(self, message, sender):
-        if message.startswith("[PRIVADO]"):
-            print(f"\n{message}")
-        else:
-            print(f"\n[{sender}] {message}")
+        print(f"\n{message}" if message.startswith("[PRIVADO]") else f"\n[{sender}] {message}")
 
 def listen_input(server, username):
     while True:
@@ -17,7 +16,6 @@ def listen_input(server, username):
             server.unregister(username)
             print("Você saiu do chat.")
             break
-
         if msg.startswith("@"):
             try:
                 target, content = msg[1:].split(" ", 1)
@@ -27,33 +25,37 @@ def listen_input(server, username):
             except:
                 print("Use: @usuario mensagem")
             continue
-
         server.broadcast(msg, username)
 
-
 def main():
+    # lê configuração
+    config = configparser.ConfigParser()
+    config.read("chat.conf")
+    server_host = config.get("pyro", "host", fallback="localhost")
+    ns_host = config.get("pyro", "ns_host", fallback="localhost")
+    ns_port = config.getint("pyro", "ns_port", fallback=9090)
+
     username = input("Digite seu nome de usuário: ").strip()
 
-    daemon = Pyro5.api.Daemon()
+    # pega o IP local da máquina cliente para o callback
+    local_ip = socket.gethostbyname(socket.gethostname())
+    daemon = Pyro5.api.Daemon(host=local_ip)
     callback = ClientCallback()
     callback_uri = daemon.register(callback)
 
-    # inicia o daemon em thread antes de registrar no servidor
     threading.Thread(target=daemon.requestLoop, daemon=True).start()
-    time.sleep(0.1)  # pequeno delay garante que daemon esteja pronto
+    time.sleep(0.1)
 
-    server = Pyro5.api.Proxy("PYRONAME:chat.server")
+    ns = Pyro5.api.locate_ns(host=ns_host, port=ns_port)
+    server = Pyro5.api.Proxy(f"PYRONAME:chat.server@{server_host}")
 
-    # envia somente o URI
     ok = server.register(username, callback_uri)
     if not ok:
         print("Nome já está em uso. Execute novamente.")
         return
 
     print("Conectado ao servidor.")
-
     listen_input(server, username)
-
 
 if __name__ == "__main__":
     main()

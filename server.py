@@ -1,9 +1,10 @@
 import Pyro5.api
+import configparser
 
 @Pyro5.api.expose
 class ChatServer:
     def __init__(self):
-        self.clients = {}  # username -> callback_uri
+        self.clients = {}  # username -> callback URI
 
     def register(self, username, callback_uri):
         if username in self.clients:
@@ -24,7 +25,7 @@ class ChatServer:
         for user, callback_uri in self.clients.items():
             try:
                 callback = Pyro5.api.Proxy(callback_uri)
-                callback._pyroTimeout = 1  # evita travar
+                callback._pyroTimeout = 1
                 callback.receive_message(message, sender)
             except:
                 desconectados.append(user)
@@ -37,23 +38,30 @@ class ChatServer:
         try:
             callback = Pyro5.api.Proxy(self.clients[target])
             callback._pyroTimeout = 1
-            # envia a mensagem com marcador [PRIVADO de sender]
             callback.receive_message(f"[PRIVADO de {sender}] {message}", sender)
             return True
         except:
             return False
 
 def main():
-    daemon = Pyro5.api.Daemon()
-    ns = Pyro5.api.locate_ns()
+    # lê configuração
+    config = configparser.ConfigParser()
+    config.read("chat.conf")
+    host = config.get("pyro", "host", fallback="localhost")
+    port = config.getint("pyro", "port", fallback=0)
+    ns_host = config.get("pyro", "ns_host", fallback="localhost")
+    ns_port = config.getint("pyro", "ns_port", fallback=9090)
+
+    daemon = Pyro5.api.Daemon(host=host, port=port)
+    ns = Pyro5.api.locate_ns(host=ns_host, port=ns_port)
+
     uri = daemon.register(ChatServer())
     ns.register("chat.server", uri)
 
-    print("[SERVER] Registrado no NameServer como 'chat.server'")
+    print(f"[SERVER] Registrado no NameServer como 'chat.server' em {host}")
     print("[SERVER] Servidor iniciado.")
 
     daemon.requestLoop()
-
 
 if __name__ == "__main__":
     main()
