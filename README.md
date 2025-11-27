@@ -8,12 +8,30 @@ pip install Pyro5
 Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
 ##### Iniciar o nameserver
-pyro5-ns
+pyro5-ns -n IP_SERVIDOR
 
 ##### Iniciar o servidor
-python server.py SERVER_IP
+python server.py 
 
 ##### Iniciar clientes
-python client.py SERVER_IP
+python client.py 
 
-Se não for passado argumentos para o server.py e pro client.py -> localhost é assumido como default
+## Utilizando uma máquina como servidor. 
+## Na máquina do servidor, alterar o chat.conf com:
+host = IP_SERVIDOR
+# Porta do daemon (opcional, padrão 0 = aleatória)
+port = 0
+# Host do NameServer
+ns_host = IP_SERVIDOR
+# Porta do NameServer
+ns_port = 9090
+
+## Na máquina que utilizará o client.
+# Host do daemon (IP do servidor)
+host = IP_SERVIDOR
+# Porta do daemon (opcional, padrão 0 = aleatória)
+port = 0
+# Host do NameServer
+ns_host = localhost
+# Porta do NameServer
+ns_port = 9090
